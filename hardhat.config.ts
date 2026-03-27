@@ -19,7 +19,7 @@ export default defineConfig({
       url: "https://public-node.rsk.co",
       chainId: 30,
       gasPrice: 60000000,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     rootstockTestnet: {
       type: "http",
@@ -27,7 +27,7 @@ export default defineConfig({
       url: "https://rootstock-testnet.drpc.org",
       chainId: 31,
       gasPrice: 60000000,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
   sourcify: {

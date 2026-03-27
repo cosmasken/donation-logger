@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;  // Updated to a more recent minor version for better safety features
+pragma solidity ^0.8.28;  // Updated to a more recent minor version for better safety features
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract DonationLogger is ReentrancyGuard {
     address public immutable creator;
