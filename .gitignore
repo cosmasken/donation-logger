@@ -19,6 +19,9 @@
 # Hardhat coverage reports
 /coverage
 
+# Ignition deployments
+ignition/deployments/
+
 # Environment variables
 .env
 .env.local

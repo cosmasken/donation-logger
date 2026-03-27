@@ -54,7 +54,7 @@ contract DonationLogger is ReentrancyGuard {
         nonReentrant 
     {
         require(msg.sender == creator, "Not creator");
-        require(ended, "Campaign not ended");
+        require(block.timestamp >= deadline, "Campaign still active");
         uint256 amount = totalRaised;
         require(amount > 0, "No funds to withdraw");
 

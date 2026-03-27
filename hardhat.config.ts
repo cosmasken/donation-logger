@@ -1,5 +1,5 @@
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
-import { configVariable, defineConfig } from "hardhat/config";
+import { defineConfig } from "hardhat/config";
 import '@nomicfoundation/hardhat-verify';
 import 'dotenv/config';
 
@@ -24,14 +24,11 @@ export default defineConfig({
     rootstockTestnet: {
       type: "http",
       chainType: "l1",
-      url: "https://rootstock-testnet.drpc.org",
+      url: "https://public-node.testnet.rsk.co",
       chainId: 31,
       gasPrice: 60000000,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
-  },
-  sourcify: {
-    enabled: false,
   },
   etherscan: {
     apiKey: {
