@@ -16,10 +16,11 @@ export interface Campaign {
   isActive: boolean
   timeRemaining: bigint
   address: string
+  title?: string
 }
 
 export const CONTRACT_ADDRESS = '0x50c89535b2059131600f8bbe0e73f8306d279019'
-export const FACTORY_ADDRESS = '0x4a1BA24b6a42dE6742e35201188470B6Bf109017'
+export const FACTORY_ADDRESS = '0xdB0c827ebDce84f14092a01743DCa1E57E725437'
 export const CONTRACT_BYTECODE = bytecode
 
 export const CONTRACT_ABI = [

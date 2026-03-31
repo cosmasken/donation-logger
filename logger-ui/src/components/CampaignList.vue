@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useContract, getPublicClient } from '@/composables/useContract'
 import { FACTORY_ADDRESS } from '@/types/contract'
 import type { Campaign } from '@/types/contract'
 
 const emit = defineEmits<{
   (e: 'select-campaign', address: string): void
+  (e: 'create-campaign'): void
 }>()
 
-const { getAllCampaigns, getCampaignData } = useContract()
+const { getAllCampaigns, getCampaignData, getCampaignTitles } = useContract()
 
 const publicClientForRead = getPublicClient()
 
@@ -16,6 +17,9 @@ const campaigns = ref<(Campaign & { address: string })[]>([])
 const loadingCampaigns = ref(false)
 const searchQuery = ref('')
 const statusFilter = ref<'all' | 'active' | 'ended'>('all')
+
+const now = ref(Date.now())
+let intervalId: ReturnType<typeof setInterval> | null = null
 
 const filteredCampaigns = computed(() => {
   let result = campaigns.value
@@ -43,6 +47,25 @@ const statusCounts = computed(() => ({
   ended: campaigns.value.filter(c => !c.isActive || c.ended).length
 }))
 
+function getCountdown(deadline: bigint): number {
+  const deadlineMs = Number(deadline) * 1000
+  return Math.max(0, Math.floor((deadlineMs - now.value) / 1000))
+}
+
+function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return 'Ended'
+  
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  
+  if (days > 0) return `${days}d ${hours}h left`
+  if (hours > 0) return `${hours}h ${minutes}m left`
+  if (minutes > 0) return `${minutes}m ${secs}s left`
+  return `${secs}s left`
+}
+
 async function fetchAllCampaigns() {
   if (!publicClientForRead || !FACTORY_ADDRESS) return
   
@@ -50,11 +73,15 @@ async function fetchAllCampaigns() {
   try {
     const addresses = await getAllCampaigns(publicClientForRead, FACTORY_ADDRESS)
     
-    // Fetch campaign data for each address
+    const titleMap = await getCampaignTitles(publicClientForRead, FACTORY_ADDRESS, addresses)
+    
     const campaignPromises = addresses.map(async (address) => {
       try {
         const campaignData = await getCampaignData(publicClientForRead, address)
-        return { ...campaignData }
+        return { 
+          ...campaignData,
+          title: titleMap.get(address.toLowerCase()) || `Campaign ${address.slice(0, 8)}...`
+        }
       } catch (err) {
         console.error(`Failed to fetch campaign ${address}:`, err)
         return null
@@ -62,7 +89,7 @@ async function fetchAllCampaigns() {
     })
     
     const results = await Promise.all(campaignPromises)
-    campaigns.value = results.filter(Boolean) as (Campaign & { address: string })[]
+    campaigns.value = results.filter(Boolean) as (Campaign & { address: string; title: string })[]
   } catch (err) {
     console.error('Failed to fetch campaigns:', err)
   } finally {
@@ -83,19 +110,15 @@ function formatAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
-function formatTimeRemaining(timeRemaining: bigint): string {
-  const seconds = Number(timeRemaining)
-  if (seconds <= 0) return 'Ended'
-  
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  
-  if (days > 0) return `${days}d ${hours}h left`
-  return `${hours}h left`
-}
-
 onMounted(() => {
   fetchAllCampaigns()
+  intervalId = setInterval(() => {
+    now.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (intervalId) clearInterval(intervalId)
 })
 </script>
 
@@ -105,15 +128,23 @@ onMounted(() => {
     <div class="card p-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-bitcoin-600 mb-2">Campaign Explorer</h1>
-        <p class="text-gray-600">Discover and support donation campaigns on Rootstock</p>
+        <h1 class="text-2xl font-bold text-primary mb-2">Campaign Explorer</h1>
+        <p class="text-muted-foreground">Discover and support donation campaigns on Rootstock</p>
       </div>
-      <button @click="fetchAllCampaigns" :disabled="loadingCampaigns" class="btn-primary disabled:opacity-50">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Refresh
-      </button>
+      <div class="flex gap-2">
+        <button @click="fetchAllCampaigns" :disabled="loadingCampaigns" class="btn-secondary disabled:opacity-50">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh
+        </button>
+        <button @click="emit('create-campaign')" class="btn-primary">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Create
+        </button>
+      </div>
     </div>
       
       <!-- Search and Filter Row -->
@@ -121,7 +152,7 @@ onMounted(() => {
         <!-- Search Bar -->
         <div class="relative flex-1">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -140,8 +171,8 @@ onMounted(() => {
             :key="status"
             @click="statusFilter = status"
             :class="statusFilter === status 
-              ? 'bg-orange-500 text-white' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+              ? 'bg-primary text-black' 
+              : 'bg-muted text-foreground hover:bg-muted/80'"
             class="px-4 py-2 rounded-lg font-medium text-sm transition-colors capitalize"
           >
             {{ status === 'all' ? 'All' : status }} ({{ statusCounts[status] }})
@@ -184,8 +215,8 @@ onMounted(() => {
         <!-- Campaign Header -->
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 truncate">{{ formatAddress(campaign.address) }}</h3>
-            <p class="text-xs text-gray-500 font-mono">{{ formatAddress(campaign.address) }}</p>
+            <h3 class="font-semibold text-foreground truncate">{{ campaign.title }}</h3>
+            <p class="text-xs text-muted-foreground font-mono">{{ formatAddress(campaign.address) }}</p>
           </div>
           <span 
             :class="campaign.isActive && !campaign.ended 
@@ -201,7 +232,7 @@ onMounted(() => {
         <div class="mb-3">
           <div class="flex justify-between items-center mb-1">
             <span class="text-sm font-medium text-gray-700">Raised</span>
-            <span class="text-xs text-gray-500">{{ formatTimeRemaining(campaign.timeRemaining) }}</span>
+            <span class="text-xs text-muted-foreground">{{ formatCountdown(getCountdown(campaign.deadline)) }}</span>
           </div>
           <div class="w-full bg-gray-100 rounded-full h-2">
             <div 
@@ -219,7 +250,7 @@ onMounted(() => {
             </p>
           </div>
           <div class="text-right">
-            <p class="text-xs text-gray-500">by {{ formatAddress(campaign.creator) }}</p>
+            <p class="text-xs text-muted-foreground">by {{ formatAddress(campaign.creator) }}</p>
           </div>
         </div>
       </div>

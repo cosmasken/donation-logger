@@ -51,7 +51,6 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// Bitcoin theme colors
 				bitcoin: {
 					DEFAULT: '#fbbf24',
 					50: '#fefce8',
@@ -59,29 +58,33 @@ export default {
 					200: '#fef08a',
 					300: '#fde047',
 					400: '#facc15',
-					500: '#fbbf24', // Main bitcoin color
+					500: '#fbbf24',
 					600: '#f59e0b',
 					700: '#d97706',
 					800: '#b45309',
 					900: '#92400e',
 				},
+				yellow: {
+					DEFAULT: '#fbbf24',
+					50: '#fefce8',
+					100: '#fef9c3',
+					200: '#fef08a',
+					300: '#fde047',
+					400: '#facc15',
+					500: '#fbbf24',
+					600: '#f59e0b',
+					700: '#d97706',
+					800: '#b45309',
+					900: '#92400e',
+				}
 			},
 			fontFamily: {
 				sans: [
-					'DM Sans',
-					'-apple-system',
-					'BlinkMacSystemFont',
-					'"Segoe UI"',
-					'Roboto',
-					'"Helvetica Neue"',
-					'Arial',
-					'sans-serif'
+					'IBM Plex Mono',
+					'monospace'
 				],
 				mono: [
-					'"Roboto Mono"',
-					'"SF Mono"',
-					'Monaco',
-					'Inconsolata',
+					'IBM Plex Mono',
 					'monospace'
 				]
 			},

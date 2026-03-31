@@ -139,21 +139,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+  <div class="min-h-screen bg-background">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-orange-100">
+    <header class="bg-card shadow-sm border-b border-border">
       <div class="container mx-auto px-4 py-4">
         <div class="flex justify-between items-center mb-4">
           <div>
-            <h1 class="text-2xl font-bold text-orange-600">DonationLogger</h1>
-            <p class="text-sm text-gray-500">RSK Testnet</p>
+            <h1 class="text-2xl font-bold text-primary">DonationLogger</h1>
+            <p class="text-sm text-muted-foreground">RSK Testnet</p>
           </div>
           <ConnectButton />
         </div>
         
         <!-- Contract Address Input -->
         <div class="flex gap-2 items-center">
-          <label class="text-sm font-medium text-gray-700">Selected Campaign:</label>
+          <label class="text-sm font-medium text-foreground">Selected Campaign:</label>
           <input
             v-model="contractAddress"
             @change="handleAddressChange"
@@ -170,29 +170,22 @@ onMounted(async () => {
     <main class="container mx-auto px-4 py-8">
       <!-- Loading State -->
       <div v-if="loading && !campaign" class="flex justify-center items-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="card p-6 bg-red-50 border-red-200">
-        <p class="text-red-600">{{ error }}</p>
+      <div v-else-if="error" class="card p-6 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800">
+        <p class="text-red-600 dark:text-red-200">{{ error }}</p>
       </div>
 
       <!-- Dashboard -->
       <div v-else class="space-y-6">
-        <!-- Campaign List with Create Button -->
-        <div class="flex justify-between items-start gap-4">
-          <div class="flex-1">
-            <CampaignList @select-campaign="handleSelectCampaign" />
-          </div>
-          <div class="flex-shrink-0">
-            <button @click="showCreateModal = true" class="btn-primary">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Create Campaign
-            </button>
-          </div>
+        <!-- Campaign List -->
+        <div>
+          <CampaignList 
+            @select-campaign="handleSelectCampaign" 
+            @create-campaign="showCreateModal = true" 
+          />
         </div>
 
         <!-- Campaign Status (when selected) -->

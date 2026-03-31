@@ -15,8 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 45 93% 47%; /* Bitcoin orange/yellow */
-    --primary-foreground: 210 40% 98%;
+    --primary: 45 93% 47%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -24,54 +24,51 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 45 93% 47%; /* Bitcoin color */
-    --accent-foreground: 210 40% 98%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 45 93% 47%;
 
-    --radius: 0.5rem;
-
-    /* Bitcoin specific colors */
     --bitcoin: 45 93% 47%;
     --bitcoin-foreground: 0 0% 0%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 45 93% 47%;
-    --primary-foreground: 222.2 84% 4.9%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 60%;
 
     --accent: 45 93% 47%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
     --ring: 45 93% 47%;
 
     --bitcoin: 45 93% 47%;
-    --bitcoin-foreground: 222.2 84% 4.9%;
+    --bitcoin-foreground: 0 0% 0%;
   }
 }
 
@@ -83,7 +80,7 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'IBM Plex Mono', monospace;
     background-image: 
       radial-gradient(circle at 25% 25%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
       radial-gradient(circle at 75% 75%, rgba(34, 197, 94, 0.05) 0%, transparent 50%);
@@ -91,7 +88,6 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
-    text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
   }
 }
 
@@ -180,13 +176,13 @@
 
 /* Bitcoin/Crypto formatting */
 .sats-display {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
   color: #fbbf24;
 }
 
 .btc-display {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
   color: #22c55e;
 }
@@ -270,13 +266,18 @@
   padding: 0.75rem 1rem;
   transition: all 0.2s ease;
   width: 100%;
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'IBM Plex Mono', monospace;
+  color: hsl(var(--foreground));
 }
 
 .input-field:focus {
   outline: none;
   border-color: hsl(var(--ring));
   box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.input-field::placeholder {
+  color: hsl(var(--muted-foreground));
 }
 
 /* Modal styles */
@@ -450,3 +451,22 @@
 .animate-fade-in { animation: fadeIn 0.3s ease-out; }
 .animate-scale-in { animation: scaleIn 0.2s ease-out; }
 .fade-in { animation: fadeIn 0.5s ease-in-out; }
+
+/* Text color utilities - automatically adapt to dark mode */
+.text-subtitle { color: hsl(var(--muted-foreground)); }
+.text-header { color: hsl(var(--foreground)); }
+.text-accent { color: hsl(var(--accent)); }
+
+/* Background utilities */
+.bg-view { background-color: hsl(var(--background)); }
+.bg-card-view { background-color: hsl(var(--card)); }
+.bg-section { background-color: hsl(var(--muted)); }
+
+/* Border utilities */
+.border-view { border-color: hsl(var(--border)); }
+
+/* IBM Plex Mono font classes */
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+.font-mono-medium { font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+.font-mono-semibold { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+.font-mono-bold { font-family: 'IBM Plex Mono', monospace; font-weight: 700; }

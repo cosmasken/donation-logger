@@ -56,6 +56,81 @@ export function useContract() {
     }
   }
 
+  async function getCampaignTitles(publicClient: PublicClient, factoryAddress: string, campaignAddresses: string[]): Promise<Map<string, string>> {
+    const titleMap = new Map<string, string>()
+    
+    if (campaignAddresses.length === 0) return titleMap
+
+    try {
+      const latestBlock = await publicClient.getBlockNumber()
+      const maxRange = 1000n
+      const fromBlock = latestBlock > maxRange ? latestBlock - maxRange : 0n
+
+      const events = await publicClient.getLogs({
+        address: factoryAddress as `0x${string}`,
+        event: {
+          type: 'event',
+          name: 'CampaignCreated',
+          inputs: [
+            { type: 'address', name: 'creator', indexed: true },
+            { type: 'address', name: 'campaign', indexed: true },
+            { type: 'uint256', name: 'duration', indexed: false },
+            { type: 'string', name: 'title', indexed: false }
+          ]
+        },
+        args: {},
+        fromBlock,
+        toBlock: latestBlock
+      })
+
+      for (const event of events) {
+        const campaignAddr = event.args.campaign as string
+        if (campaignAddresses.includes(campaignAddr.toLowerCase())) {
+          titleMap.set(campaignAddr.toLowerCase(), event.args.title as string)
+        }
+      }
+    } catch (err) {
+      console.error('getCampaignTitles error:', err)
+    }
+
+    return titleMap
+  }
+
+  async function getCampaignTitleSingle(publicClient: PublicClient, factoryAddress: string, campaignAddress: string): Promise<string | null> {
+    try {
+      const latestBlock = await publicClient.getBlockNumber()
+      const maxRange = 1000n
+      const fromBlock = latestBlock > maxRange ? latestBlock - maxRange : 0n
+
+      const events = await publicClient.getLogs({
+        address: factoryAddress as `0x${string}`,
+        event: {
+          type: 'event',
+          name: 'CampaignCreated',
+          inputs: [
+            { type: 'address', name: 'creator', indexed: true },
+            { type: 'address', name: 'campaign', indexed: true },
+            { type: 'uint256', name: 'duration', indexed: false },
+            { type: 'string', name: 'title', indexed: false }
+          ]
+        },
+        args: {
+          campaign: campaignAddress as `0x${string}`
+        },
+        fromBlock,
+        toBlock: latestBlock
+      })
+
+      if (events.length > 0) {
+        return events[0].args.title as string
+      }
+      return null
+    } catch (err) {
+      console.error('getCampaignTitleSingle error:', err)
+      return null
+    }
+  }
+
   async function createCampaign(walletClient: WalletClient, account: `0x${string}`, factoryAddress: string, durationDays: number, title: string): Promise<string | null> {
     loading.value = true
     error.value = null
@@ -73,15 +148,19 @@ export function useContract() {
       const client = getPublicClient()
       const receipt = await client.waitForTransactionReceipt({ hash })
       
-      // Get campaign address from event logs
-      const log = receipt.logs.find(log => log.topics[0] === '0x...' /* CampaignCreated event hash */)
-      const campaignAddress = log?.topics[2] // campaign address is indexed
+      const log = receipt.logs.find(log => log.topics[0] === '0x...')
+      const campaignAddress = log?.topics[2]
 
       loading.value = false
       return campaignAddress ? `0x${campaignAddress.slice(26)}` : null
     } catch (err: unknown) {
-      console.error('Campaign creation error:', err)
-      error.value = err instanceof Error ? err.message : 'Campaign creation failed'
+      const errorMessage = err instanceof Error ? err.message : 'Campaign creation failed'
+      if (errorMessage.includes('User denied') || errorMessage.includes('rejected')) {
+        error.value = 'Transaction rejected'
+      } else {
+        console.error('Campaign creation error:', err)
+        error.value = errorMessage
+      }
       loading.value = false
       return null
     }
@@ -107,7 +186,13 @@ export function useContract() {
       loading.value = false
       return true
     } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Donation failed'
+      const errorMessage = err instanceof Error ? err.message : 'Donation failed'
+      if (errorMessage.includes('User denied') || errorMessage.includes('rejected')) {
+        error.value = 'Transaction rejected'
+      } else {
+        console.error('Donation error:', err)
+        error.value = errorMessage
+      }
       loading.value = false
       return false
     }
@@ -116,7 +201,8 @@ export function useContract() {
   async function getDonations(publicClient: PublicClient, contractAddress: string): Promise<Donation[]> {
     try {
       const latestBlock = await publicClient.getBlockNumber()
-      const fromBlock = latestBlock > 1500n ? latestBlock - 1500n : 0n
+      const maxRange = 1000n
+      const fromBlock = latestBlock > maxRange ? latestBlock - maxRange : 0n
       
       const events = await publicClient.getLogs({
         address: contractAddress as `0x${string}`,
@@ -131,7 +217,7 @@ export function useContract() {
         },
         args: {},
         fromBlock,
-        toBlock: 'latest'
+        toBlock: latestBlock
       })
 
       return events.map(event => ({
@@ -166,7 +252,13 @@ export function useContract() {
       loading.value = false
       return true
     } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Withdrawal failed'
+      const errorMessage = err instanceof Error ? err.message : 'Withdrawal failed'
+      if (errorMessage.includes('User denied') || errorMessage.includes('rejected')) {
+        error.value = 'Transaction rejected'
+      } else {
+        console.error('Withdrawal error:', err)
+        error.value = errorMessage
+      }
       loading.value = false
       return false
     }
@@ -191,7 +283,13 @@ export function useContract() {
       loading.value = false
       return true
     } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : 'Failed to end campaign'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to end campaign'
+      if (errorMessage.includes('User denied') || errorMessage.includes('rejected')) {
+        error.value = 'Transaction rejected'
+      } else {
+        console.error('End campaign error:', err)
+        error.value = errorMessage
+      }
       loading.value = false
       return false
     }
@@ -228,6 +326,8 @@ export function useContract() {
     loading,
     error,
     getCampaignData,
+    getCampaignTitles,
+    getCampaignTitleSingle,
     createCampaign,
     donate,
     getDonations,

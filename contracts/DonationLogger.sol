@@ -13,12 +13,12 @@ contract DonationLogger is ReentrancyGuard {
     event CampaignEnded(uint256 totalRaised);
     event FundsWithdrawn(address indexed creator, uint256 amount);
 
-    constructor(uint256 _durationDays) {
-        require(_durationDays > 0, "Duration must be positive");
-        require(_durationDays <= 365, "Duration too long (max 1 year)");  // Optional bound to prevent absurd values
+    constructor(uint256 _durationSeconds, address _creator) {
+        require(_durationSeconds >= 3600, "Minimum duration is 1 hour");
+        require(_durationSeconds <= 365 days, "Duration too long (max 1 year)");
 
-        creator = msg.sender;
-        deadline = block.timestamp + _durationDays * 1 days;
+        creator = _creator;
+        deadline = block.timestamp + _durationSeconds;
     }
 
     modifier onlyBeforeDeadline() {

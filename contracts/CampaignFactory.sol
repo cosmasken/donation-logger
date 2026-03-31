@@ -9,14 +9,14 @@ contract CampaignFactory {
     
     event CampaignCreated(address indexed creator, address indexed campaign, uint256 duration, string title);
     
-    function createCampaign(uint256 _durationDays, string calldata _title) external returns (address) {
-        DonationLogger campaign = new DonationLogger(_durationDays);
+    function createCampaign(uint256 _durationSeconds, string calldata _title) external returns (address) {
+        DonationLogger campaign = new DonationLogger(_durationSeconds, msg.sender);
         address campaignAddress = address(campaign);
         
         campaigns.push(campaignAddress);
         creatorCampaigns[msg.sender].push(campaignAddress);
         
-        emit CampaignCreated(msg.sender, campaignAddress, _durationDays, _title);
+        emit CampaignCreated(msg.sender, campaignAddress, _durationSeconds, _title);
         return campaignAddress;
     }
     

@@ -14,7 +14,7 @@ contract DonationLoggerTest is Test {
     
     function setUp() public {
         vm.prank(creator);
-        campaign = new DonationLogger(DURATION_DAYS);
+        campaign = new DonationLogger(DURATION_DAYS * 1 days, creator);
         
         vm.deal(donor1, 10 ether);
         vm.deal(donor2, 10 ether);

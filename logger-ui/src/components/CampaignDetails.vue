@@ -4,6 +4,7 @@ import { useWallet } from '@/composables/useWallet'
 import { useContract, getPublicClient } from '@/composables/useContract'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { useToast } from '@/composables/useToast'
+import { FACTORY_ADDRESS } from '@/types/contract'
 import type { Campaign, Donation } from '@/types/contract'
 import ConnectButton from '@/components/ConnectButton.vue'
 import CampaignStatus from '@/components/CampaignStatus.vue'
@@ -19,10 +20,11 @@ const emit = defineEmits<{
 }>()
 
 const { walletClient, account, isConnected, switchToRSKTestnet } = useWallet()
-const { loading, error, getCampaignData, getDonations, donate, withdraw, endCampaign } = useContract()
+const { loading, error, getCampaignData, getDonations, donate, withdraw, endCampaign, getCampaignTitleSingle } = useContract()
 const toast = useToast()
 
 const campaign = ref<Campaign | null>(null)
+const campaignTitle = ref<string | null>(null)
 const donations = ref<Donation[]>([])
 const actionLoading = ref<string | null>(null)
 
@@ -37,6 +39,7 @@ async function fetchCampaignData() {
   if (!publicClientForRead || !props.address) return
   try {
     campaign.value = await getCampaignData(publicClientForRead, props.address)
+    campaignTitle.value = await getCampaignTitleSingle(publicClientForRead, FACTORY_ADDRESS, props.address)
   } catch (e) {
     console.error(e)
   }
@@ -62,6 +65,9 @@ async function handleDonate(amount: string, message: string) {
   actionLoading.value = 'donate'
   try {
     const success = await donate(walletClient.value, account.value, props.address, message, amount)
+    if (!success && error.value) {
+      toast.error(error.value)
+    }
     return success
   } finally {
     actionLoading.value = null
@@ -106,6 +112,16 @@ const isCampaignCreator = computed(() => {
   return campaign.value && account.value && campaign.value.creator.toLowerCase() === account.value.toLowerCase()
 })
 
+const canEndCampaign = computed(() => {
+  if (!campaign.value) return false
+  return Date.now() >= Number(campaign.value.deadline) * 1000
+})
+
+const canWithdraw = computed(() => {
+  if (!campaign.value) return false
+  return !campaign.value.isActive && campaign.value.totalRaised > 0n
+})
+
 watch(isConnected, async (newValue) => {
   if (newValue) {
     await switchToRSKTestnet()
@@ -124,21 +140,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
+  <div class="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-gray-900 dark:to-gray-800">
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-orange-100">
+    <header class="bg-white dark:bg-gray-900 shadow-sm border-b border-orange-100 dark:border-gray-700">
       <div class="container mx-auto px-4 py-4">
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-4">
-            <button @click="emit('back')" class="flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors">
+            <button @click="emit('back')" class="flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors dark:text-gray-300 dark:hover:text-orange-400">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
               Back
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-orange-600">Campaign Details</h1>
-              <p class="text-sm text-gray-500">RSK Testnet</p>
+              <h1 class="text-2xl font-bold text-orange-600 dark:text-orange-400">Campaign Details</h1>
+              <p class="text-sm text-gray-500 dark:text-gray-400">RSK Testnet</p>
             </div>
           </div>
           <ConnectButton />
@@ -172,7 +188,7 @@ onMounted(async () => {
       <!-- Campaign Details -->
       <div v-else class="space-y-6">
         <!-- Campaign Status -->
-        <CampaignStatus v-if="campaign" :campaign="campaign" />
+        <CampaignStatus v-if="campaign" :campaign="campaign" :title="campaignTitle" />
 
         <!-- Action Buttons for Creator -->
         <div v-if="campaign && isCampaignCreator" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -182,17 +198,20 @@ onMounted(async () => {
               <button
                 v-if="!campaign.ended && campaign.isActive"
                 @click="handleEndCampaign"
-                :disabled="actionLoading === 'end'"
-                class="w-full bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 text-white py-2 px-4 rounded font-semibold transition-colors flex items-center justify-center gap-2"
+                :disabled="actionLoading === 'end' || !canEndCampaign"
+                class="w-full bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 disabled:cursor-not-allowed text-white py-2 px-4 rounded font-semibold transition-colors flex items-center justify-center gap-2"
               >
                 <svg v-if="actionLoading === 'end'" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
-                {{ actionLoading === 'end' ? 'Ending...' : 'End Campaign' }}
+                {{ actionLoading === 'end' ? 'Ending...' : canEndCampaign ? 'End Campaign' : 'End Campaign (wait for deadline)' }}
               </button>
+              <p v-if="!campaign.ended && campaign.isActive && !canEndCampaign" class="text-sm text-gray-500 dark:text-gray-400">
+                Campaign is still active - you can end it after the deadline
+              </p>
               <button
-                v-if="!campaign.isActive && campaign.totalRaised > 0n"
+                v-if="canWithdraw"
                 @click="handleWithdraw"
                 :disabled="actionLoading === 'withdraw'"
                 class="btn-primary w-full flex items-center justify-center gap-2"
@@ -203,11 +222,11 @@ onMounted(async () => {
                 </svg>
                 {{ actionLoading === 'withdraw' ? 'Withdrawing...' : 'Withdraw Funds' }}
               </button>
-              <p v-if="!campaign.isActive && campaign.totalRaised === 0n" class="text-sm text-gray-500">
+              <p v-if="!campaign.isActive && campaign.totalRaised === 0n" class="text-sm text-gray-500 dark:text-gray-400">
                 No funds to withdraw
               </p>
-              <p v-if="campaign.isActive" class="text-sm text-gray-500">
-                Campaign is still active - creator can withdraw after deadline
+              <p v-if="campaign.isActive" class="text-sm text-gray-500 dark:text-gray-400">
+                Campaign is still active - withdrawal available after deadline
               </p>
             </div>
           </div>

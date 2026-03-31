@@ -7,18 +7,19 @@ A transparent on-chain donation system built on Rootstock (RSK) with intentional
 The donation logger contracts are deployed and verified on RSK Testnet:
 
 ### Campaign Factory
-- **Address**: `0x4a1BA24b6a42dE6742e35201188470B6Bf109017`
-- **Blockscout**: https://rootstock-testnet.blockscout.com/address/0x4a1BA24b6a42dE6742e35201188470B6Bf109017
-- **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0x4a1BA24b6a42dE6742e35201188470B6Bf109017
+- **Address**: `0xdB0c827ebDce84f14092a01743DCa1E57E725437`
+- **Blockscout**: https://rootstock-testnet.blockscout.com/address/0xdB0c827ebDce84f14092a01743DCa1E57E725437
+- **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0xdB0c827ebDce84f14092a01743DCa1E57E725437
 
 ### Example Campaign
-- **Address**: `0x50c89535b2059131600f8bbe0e73f8306d279019`
-- **Blockscout**: https://rootstock-testnet.blockscout.com/address/0x50c89535b2059131600f8bbe0e73f8306d279019
-- **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0x50c89535b2059131600f8bbe0e73f8306d279019
+- **Address**: `0xedF3A7A4f00232bb2BB1A40b5122D906b9543a62`
+- **Blockscout**: https://rootstock-testnet.blockscout.com/address/0xedF3A7A4f00232bb2BB1A40b5122D906b9543a62
+- **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0xedF3A7A4f00232bb2BB1A40b5122D906b9543a62
 
 ## Features
 
 - **Factory Pattern**: Create multiple independent donation campaigns
+- **Flexible Duration**: Campaigns can run from 1 hour to 365 days
 - **Campaign Management**: Each campaign has its own contract with time-based deadlines
 - Donate to campaigns with optional messages
 - Automatic withdrawal access after deadline (no manual finalization required)
@@ -119,7 +120,7 @@ npx hardhat verify --network rootstockTestnet <CONTRACT_ADDRESS> <DURATION_DAYS>
 
 ```javascript
 [
-  "constructor(uint256 _durationDays)",
+  "constructor(uint256 _durationSeconds)",
   "function donate(string calldata message) external payable",
   "function withdraw() external",
   "function endCampaign() external",
@@ -134,6 +135,11 @@ npx hardhat verify --network rootstockTestnet <CONTRACT_ADDRESS> <DURATION_DAYS>
   "event FundsWithdrawn(address indexed creator, uint256 amount)"
 ]
 ```
+
+### Duration
+- **Minimum**: 1 hour (3600 seconds)
+- **Maximum**: 365 days
+- **Unit**: Seconds (can specify hours or days when creating)
 
 ## Security Considerations
 
