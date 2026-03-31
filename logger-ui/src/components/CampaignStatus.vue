@@ -19,7 +19,12 @@ function formatTimeRemaining(seconds: bigint): string {
 }
 
 function formatAmount(wei: bigint): string {
-  return (Number(wei) / 1e18).toFixed(4)
+  const eth = Number(wei) / 1e18
+  if (eth === 0) return '0'
+  if (eth < 0.000001) return eth.toFixed(8)
+  if (eth < 0.0001) return eth.toFixed(6)
+  if (eth < 1) return eth.toFixed(4)
+  return eth.toFixed(2)
 }
 
 function formatAddress(addr: string): string {

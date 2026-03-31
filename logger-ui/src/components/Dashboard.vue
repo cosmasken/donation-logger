@@ -1,84 +1,140 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+ 
+import { ref, onMounted, watch, computed } from 'vue'
 import { useWallet } from '@/composables/useWallet'
-import { useContract } from '@/composables/useContract'
-import type { Campaign, Donation } from '@/types/contract'
-import { CONTRACT_ADDRESS } from '@/types/contract'
+import { useContract, getPublicClient } from '@/composables/useContract'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
+import { useToast } from '@/composables/useToast'
+import type { Campaign } from '@/types/contract'
 import ConnectButton from '@/components/ConnectButton.vue'
 import CampaignStatus from '@/components/CampaignStatus.vue'
-import DonateForm from '@/components/DonateForm.vue'
-import DonationHistory from '@/components/DonationHistory.vue'
-import DeployForm from '@/components/DeployForm.vue'
+import CreateCampaignModal from '@/components/CreateCampaignModal.vue'
+import CampaignList from '@/components/CampaignList.vue'
 
-const { publicClient, walletClient, account, isConnected, switchToRSKTestnet } = useWallet()
-const { loading, error, getCampaignData, getDonations, donate, withdraw, endCampaign, createCampaign } = useContract()
+const emit = defineEmits<{
+  (e: 'select-campaign', address: string): void
+}>()
+
+const { walletClient, account, isConnected, switchToRSKTestnet } = useWallet()
+const { loading, error, getCampaignData, withdraw, endCampaign } = useContract()
+const toast = useToast()
 
 const campaign = ref<Campaign | null>(null)
-const donations = ref<Donation[]>([])
-const contractAddress = ref(CONTRACT_ADDRESS)
-const showDeployForm = ref(false)
+const contractAddress = ref('')
+const showCreateModal = ref(false)
+const actionLoading = ref<string | null>(null)
+
+const publicClientForRead = getPublicClient()
+
+const { startPolling, stopPolling } = useAutoRefresh(async () => {
+  if (!contractAddress.value) return
+  await fetchCampaignData()
+}, 15000)
 
 async function fetchCampaignData() {
-  if (!publicClient.value || !contractAddress.value) return
+  if (!publicClientForRead || !contractAddress.value) return
   try {
-    campaign.value = await getCampaignData(publicClient.value, contractAddress.value)
+    campaign.value = await getCampaignData(publicClientForRead, contractAddress.value)
   } catch (e) {
     console.error(e)
   }
-}
-
-async function fetchDonations() {
-  if (!publicClient.value || !contractAddress.value) return
-  try {
-    donations.value = await getDonations(publicClient.value, contractAddress.value)
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-async function handleDonated() {
-  await fetchCampaignData()
-  await fetchDonations()
-}
-
-async function handleDonate(amount: string, message: string) {
-  if (!walletClient.value || !account.value || !contractAddress.value) return false
-  return await donate(walletClient.value, account.value, contractAddress.value, message, amount)
 }
 
 async function handleWithdraw() {
   if (!walletClient.value || !account.value || !contractAddress.value) return false
-  return await withdraw(walletClient.value, account.value, contractAddress.value)
+  actionLoading.value = 'withdraw'
+  try {
+    const success = await withdraw(walletClient.value, account.value, contractAddress.value)
+    if (success) {
+      toast.success('Funds withdrawn successfully!')
+      await fetchCampaignData()
+    } else {
+      toast.error('Failed to withdraw funds')
+    }
+    return success
+  } finally {
+    actionLoading.value = null
+  }
 }
 
 async function handleEndCampaign() {
   if (!walletClient.value || !account.value || !contractAddress.value) return false
-  return await endCampaign(walletClient.value, account.value, contractAddress.value)
+  actionLoading.value = 'end'
+  try {
+    const success = await endCampaign(walletClient.value, account.value, contractAddress.value)
+    if (success) {
+      toast.success('Campaign ended successfully!')
+      await fetchCampaignData()
+    } else {
+      toast.error('Failed to end campaign')
+    }
+    return success
+  } finally {
+    actionLoading.value = null
+  }
 }
 
 async function handleCreated(newAddress: string) {
   contractAddress.value = newAddress
-  showDeployForm.value = false
+  showCreateModal.value = false
   await fetchCampaignData()
-  await fetchDonations()
+  toast.success('Campaign created successfully!')
 }
 
 function handleAddressChange() {
   fetchCampaignData()
-  fetchDonations()
 }
+
+function handleSelectCampaign(address: string) {
+  contractAddress.value = address
+  fetchCampaignData()
+  emit('select-campaign', address)
+}
+
+const isCampaignCreator = computed(() => {
+  return campaign.value && account.value && campaign.value.creator.toLowerCase() === account.value.toLowerCase()
+})
 
 watch(isConnected, async (newValue) => {
   if (newValue) {
     await switchToRSKTestnet()
-    await fetchCampaignData()
-    await fetchDonations()
+  }
+})
+
+watch(contractAddress, (newValue) => {
+  if (newValue) {
+    startPolling()
+  } else {
+    stopPolling()
   }
 })
 
 onMounted(async () => {
-  await fetchCampaignData()
-  await fetchDonations()
+  if (contractAddress.value) {
+    await fetchCampaignData()
+    startPolling()
+  }
+})
+
+watch(isConnected, async (newValue) => {
+  if (newValue) {
+    await switchToRSKTestnet()
+  }
+})
+
+watch(contractAddress, (newValue) => {
+  if (newValue) {
+    startPolling()
+  } else {
+    stopPolling()
+  }
+})
+
+onMounted(async () => {
+  if (contractAddress.value) {
+    await fetchCampaignData()
+    startPolling()
+  }
 })
 </script>
 
@@ -97,31 +153,21 @@ onMounted(async () => {
         
         <!-- Contract Address Input -->
         <div class="flex gap-2 items-center">
-          <label class="text-sm font-medium text-gray-700">Contract:</label>
+          <label class="text-sm font-medium text-gray-700">Selected Campaign:</label>
           <input
             v-model="contractAddress"
             @change="handleAddressChange"
             type="text"
             class="input-field flex-1 font-mono text-sm"
-            placeholder="0x..."
+            placeholder="Select a campaign from the list above..."
+            readonly
           />
-          <button
-            @click="showDeployForm = !showDeployForm"
-            class="btn-primary text-sm"
-          >
-            {{ showDeployForm ? 'Close' : 'Create New' }}
-          </button>
         </div>
       </div>
     </header>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
-      <!-- Deploy Form -->
-      <div v-if="showDeployForm" class="mb-6">
-        <DeployForm @created="handleCreated" />
-      </div>
-
       <!-- Loading State -->
       <div v-if="loading && !campaign" class="flex justify-center items-center py-20">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
@@ -134,49 +180,63 @@ onMounted(async () => {
 
       <!-- Dashboard -->
       <div v-else class="space-y-6">
-        <!-- Campaign Status -->
-        <CampaignStatus v-if="campaign" :campaign="campaign" />
-
-        <!-- Action Buttons for Creator -->
-        <div v-if="campaign && isConnected" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="card p-6">
-            <h3 class="font-semibold mb-3">Creator Actions</h3>
-            <div class="space-y-2">
-              <button
-                v-if="!campaign.ended && !campaign.isActive"
-                @click="handleEndCampaign"
-                class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded font-semibold transition-colors"
-              >
-                End Campaign
-              </button>
-              <button
-                v-if="!campaign.isActive && campaign.totalRaised > 0n"
-                @click="handleWithdraw"
-                class="btn-primary w-full"
-              >
-                Withdraw Funds
-              </button>
-              <p v-if="!campaign.isActive && campaign.totalRaised === 0n" class="text-sm text-gray-500">
-                No funds to withdraw
-              </p>
-              <p v-if="campaign.isActive" class="text-sm text-gray-500">
-                Campaign is still active - creator can withdraw after deadline
-              </p>
-            </div>
+        <!-- Campaign List with Create Button -->
+        <div class="flex justify-between items-start gap-4">
+          <div class="flex-1">
+            <CampaignList @select-campaign="handleSelectCampaign" />
+          </div>
+          <div class="flex-shrink-0">
+            <button @click="showCreateModal = true" class="btn-primary">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Create Campaign
+            </button>
           </div>
         </div>
 
-        <!-- Two Column Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Donate Form -->
-          <DonateForm 
-            v-if="isConnected && campaign?.isActive" 
-            @donated="handleDonated" 
-            @submit-donate="handleDonate" 
-          />
-          
-          <!-- Donation History -->
-          <DonationHistory :donations="donations" :loading="loading" />
+        <!-- Campaign Status (when selected) -->
+        <div v-if="campaign">
+          <CampaignStatus :campaign="campaign" />
+
+          <!-- Action Buttons for Creator -->
+          <div v-if="isCampaignCreator" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="card p-6">
+              <h3 class="font-semibold mb-3">Creator Actions</h3>
+              <div class="space-y-2">
+                <button
+                  v-if="!campaign.ended && campaign.isActive"
+                  @click="handleEndCampaign"
+                  :disabled="actionLoading === 'end'"
+                  class="w-full bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 text-white py-2 px-4 rounded font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg v-if="actionLoading === 'end'" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  {{ actionLoading === 'end' ? 'Ending...' : 'End Campaign' }}
+                </button>
+                <button
+                  v-if="!campaign.isActive && campaign.totalRaised > 0n"
+                  @click="handleWithdraw"
+                  :disabled="actionLoading === 'withdraw'"
+                  class="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  <svg v-if="actionLoading === 'withdraw'" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  {{ actionLoading === 'withdraw' ? 'Withdrawing...' : 'Withdraw Funds' }}
+                </button>
+                <p v-if="!campaign.isActive && campaign.totalRaised === 0n" class="text-sm text-gray-500">
+                  No funds to withdraw
+                </p>
+                <p v-if="campaign.isActive" class="text-sm text-gray-500">
+                  Campaign is still active - creator can withdraw after deadline
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -189,5 +249,12 @@ onMounted(async () => {
         </p>
       </div>
     </footer>
+
+    <!-- Create Campaign Modal -->
+    <CreateCampaignModal 
+      :open="showCreateModal" 
+      @close="showCreateModal = false"
+      @created="handleCreated" 
+    />
   </div>
 </template>

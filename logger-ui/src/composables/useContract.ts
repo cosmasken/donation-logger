@@ -1,7 +1,7 @@
 import { ref } from 'vue'
-import { createPublicClient, custom, http, parseEther, type PublicClient, type WalletClient } from 'viem'
+import { createPublicClient, http, parseEther, type PublicClient, type WalletClient } from 'viem'
 import { rootstockTestnet } from 'viem/chains'
-import { CONTRACT_ABI, CONTRACT_BYTECODE, FACTORY_ABI } from '@/types/contract'
+import { CONTRACT_ABI, FACTORY_ABI } from '@/types/contract'
 import type { Campaign, Donation } from '@/types/contract'
 
 let sharedPublicClient: PublicClient | null = null
@@ -9,7 +9,7 @@ let sharedPublicClient: PublicClient | null = null
 // Use custom RPC URL with API key from environment variable
 const RSK_TESTNET_RPC_URL = import.meta.env.VITE_RSK_TESTNET_RPC_URL || 'https://public-node.testnet.rsk.co'
 
-function getPublicClient() {
+export function getPublicClient() {
   if (!sharedPublicClient) {
     sharedPublicClient = createPublicClient({
       chain: rootstockTestnet,
@@ -197,6 +197,33 @@ export function useContract() {
     }
   }
 
+  async function getAllCampaigns(publicClient: PublicClient, factoryAddress: string): Promise<string[]> {
+    try {
+      const campaignCount = await publicClient.readContract({
+        address: factoryAddress as `0x${string}`,
+        abi: FACTORY_ABI,
+        functionName: 'getCampaignCount'
+      }) as bigint
+
+      const campaigns: string[] = []
+      for (let i = 0; i < Number(campaignCount); i++) {
+        const campaignAddress = await publicClient.readContract({
+          address: factoryAddress as `0x${string}`,
+          abi: FACTORY_ABI,
+          functionName: 'campaigns',
+          args: [BigInt(i)]
+        }) as string
+        campaigns.push(campaignAddress)
+      }
+
+      return campaigns
+    } catch (err: unknown) {
+      console.error('getAllCampaigns error:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to fetch campaigns'
+      return []
+    }
+  }
+
   return {
     loading,
     error,
@@ -205,6 +232,7 @@ export function useContract() {
     donate,
     getDonations,
     withdraw,
-    endCampaign
+    endCampaign,
+    getAllCampaigns
   }
 }
