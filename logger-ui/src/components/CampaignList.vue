@@ -32,10 +32,12 @@ const filteredCampaigns = computed(() => {
   
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(campaign => 
-      campaign.address.toLowerCase().includes(query) ||
-      campaign.creator.toLowerCase().includes(query)
-    )
+    if (!isValidAddress(query) && !isValidTxHash(query) && !isValidBlockNumber(query)) {
+      result = result.filter(campaign => 
+        campaign.address.toLowerCase().includes(query) ||
+        campaign.creator.toLowerCase().includes(query)
+      )
+    }
   }
   
   return result
@@ -46,6 +48,49 @@ const statusCounts = computed(() => ({
   active: campaigns.value.filter(c => c.isActive && !c.ended).length,
   ended: campaigns.value.filter(c => !c.isActive || c.ended).length
 }))
+
+const RSK_TESTNET_EXPLORER = 'https://rootstock-testnet.blockscout.com'
+
+const isValidAddress = (value: string): boolean => {
+  return /^0x[a-fA-F0-9]{40}$/.test(value)
+}
+
+const isValidTxHash = (value: string): boolean => {
+  return /^0x[a-fA-F0-9]{64}$/.test(value)
+}
+
+const isValidBlockNumber = (value: string): boolean => {
+  return /^\d+$/.test(value) && parseInt(value) > 0
+}
+
+function handleSearch() {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return
+
+  const campaignMatch = campaigns.value.find(c => c.address.toLowerCase() === query)
+  if (campaignMatch) {
+    emit('select-campaign', campaignMatch.address)
+    searchQuery.value = ''
+    return
+  }
+
+  if (isValidAddress(query)) {
+    window.open(`${RSK_TESTNET_EXPLORER}/address/${query}`, '_blank')
+    searchQuery.value = ''
+    return
+  }
+
+  if (isValidTxHash(query)) {
+    window.open(`${RSK_TESTNET_EXPLORER}/tx/${query}`, '_blank')
+    searchQuery.value = ''
+    return
+  }
+
+  if (isValidBlockNumber(query)) {
+    window.open(`${RSK_TESTNET_EXPLORER}/block/${query}`, '_blank')
+    searchQuery.value = ''
+  }
+}
 
 function getCountdown(deadline: bigint): number {
   const deadlineMs = Number(deadline) * 1000
@@ -158,8 +203,9 @@ onUnmounted(() => {
           </div>
           <input
             v-model="searchQuery"
+            @keyup.enter="handleSearch"
             type="text"
-            placeholder="Search by address or creator..."
+            placeholder="Search campaign, address, tx hash, or block..."
             class="search-input pl-10 w-full"
           />
         </div>

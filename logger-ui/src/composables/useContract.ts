@@ -203,7 +203,7 @@ export function useContract() {
       const latestBlock = await publicClient.getBlockNumber()
       const maxRange = 1000n
       const fromBlock = latestBlock > maxRange ? latestBlock - maxRange : 0n
-      
+
       const events = await publicClient.getLogs({
         address: contractAddress as `0x${string}`,
         event: {
@@ -220,13 +220,18 @@ export function useContract() {
         toBlock: latestBlock
       })
 
-      return events.map(event => ({
-        donor: event.args.donor as string,
-        amount: event.args.amount as bigint,
-        message: event.args.message as string,
-        timestamp: Number(event.blockNumber),
-        txHash: event.transactionHash
-      }))
+      const donations: Donation[] = []
+      for (const event of events) {
+        const block = await publicClient.getBlock({ blockNumber: event.blockNumber })
+        donations.push({
+          donor: event.args.donor as string,
+          amount: event.args.amount as bigint,
+          message: event.args.message as string,
+          timestamp: Number(block.timestamp),
+          txHash: event.transactionHash
+        })
+      }
+      return donations
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch donations'
       return []

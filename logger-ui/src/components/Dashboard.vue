@@ -148,7 +148,9 @@ onMounted(async () => {
             <h1 class="text-2xl font-bold text-primary">DonationLogger</h1>
             <p class="text-sm text-muted-foreground">RSK Testnet</p>
           </div>
-          <ConnectButton />
+          <div class="flex items-center gap-4">
+            <ConnectButton />
+          </div>
         </div>
         
         <!-- Contract Address Input -->
