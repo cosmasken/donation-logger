@@ -24,7 +24,7 @@ export default defineConfig({
     rootstockTestnet: {
       type: "http",
       chainType: "l1",
-      url: "https://public-node.testnet.rsk.co",
+      url: process.env.RSK_TESTNET_RPC_URL || "https://public-node.testnet.rsk.co",
       chainId: 31,
       gasPrice: 60000000,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],

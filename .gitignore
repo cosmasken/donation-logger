@@ -1,5 +1,6 @@
 # Node modules
 /node_modules
+/logger-ui/node_modules
 
 # Compilation output
 /dist
@@ -26,6 +27,8 @@ ignition/deployments/
 .env
 .env.local
 .env.production
+
+/logger-ui/.env
 
 # IDE files
 .vscode/

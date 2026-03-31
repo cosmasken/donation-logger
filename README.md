@@ -4,16 +4,22 @@ A transparent on-chain donation system built on Rootstock (RSK) with intentional
 
 ## Contract Addresses
 
-The donation logger contract is deployed and verified on RSK Testnet:
+The donation logger contracts are deployed and verified on RSK Testnet:
 
+### Campaign Factory
+- **Address**: `0x4a1BA24b6a42dE6742e35201188470B6Bf109017`
+- **Blockscout**: https://rootstock-testnet.blockscout.com/address/0x4a1BA24b6a42dE6742e35201188470B6Bf109017
+- **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0x4a1BA24b6a42dE6742e35201188470B6Bf109017
+
+### Example Campaign
+- **Address**: `0x50c89535b2059131600f8bbe0e73f8306d279019`
 - **Blockscout**: https://rootstock-testnet.blockscout.com/address/0x50c89535b2059131600f8bbe0e73f8306d279019
 - **RSK Explorer**: https://explorer.testnet.rootstock.io/address/0x50c89535b2059131600f8bbe0e73f8306d279019
 
-**Contract Address**: `0x50c89535b2059131600f8bbe0e73f8306d279019`
-
 ## Features
 
-- Create donation campaigns with time-based deadlines
+- **Factory Pattern**: Create multiple independent donation campaigns
+- **Campaign Management**: Each campaign has its own contract with time-based deadlines
 - Donate to campaigns with optional messages
 - Automatic withdrawal access after deadline (no manual finalization required)
 - View campaign details (creator, total raised, status)
