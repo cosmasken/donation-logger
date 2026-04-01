@@ -153,18 +153,6 @@ onMounted(async () => {
           </div>
         </div>
         
-        <!-- Contract Address Input -->
-        <div class="flex gap-2 items-center">
-          <label class="text-sm font-medium text-foreground">Selected Campaign:</label>
-          <input
-            v-model="contractAddress"
-            @change="handleAddressChange"
-            type="text"
-            class="input-field flex-1 font-mono text-sm"
-            placeholder="Select a campaign from the list above..."
-            readonly
-          />
-        </div>
       </div>
     </header>
 
